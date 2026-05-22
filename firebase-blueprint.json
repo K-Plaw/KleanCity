@@ -1,0 +1,132 @@
+{
+  "entities": {
+    "SavedCard": {
+      "title": "SavedCard",
+      "description": "A saved credit or debit card for wallet top-up",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "brand": { "type": "string", "enum": ["Visa", "Mastercard"] },
+        "last4": { "type": "string" },
+        "expiry": { "type": "string" }
+      },
+      "required": ["id", "brand", "last4", "expiry"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "A user registration profile in our system, containing credits, points, stats, and cards.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "email": { "type": "string" },
+        "points": { "type": "number" },
+        "walletBalance": { "type": "number" },
+        "referralCode": { "type": "string" },
+        "referralsInvited": { "type": "number" },
+        "referralsJoined": { "type": "number" },
+        "referralsPointsEarned": { "type": "number" },
+        "savedCards": { "type": "array" },
+        "vouchersRedeemedCount": { "type": "number" },
+        "totalVouchersCount": { "type": "number" }
+      },
+      "required": [
+        "uid",
+        "firstName",
+        "lastName",
+        "email",
+        "points",
+        "walletBalance",
+        "referralCode",
+        "savedCards"
+      ]
+    },
+    "Pickup": {
+      "title": "Pickup",
+      "description": "A scheduled waste pick-up request made by a user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "address": { "type": "string" },
+        "landmark": { "type": "string" },
+        "phone": { "type": "string" },
+        "date": { "type": "string" },
+        "timeSlot": { "type": "string" },
+        "bagsCount": { "type": "number" },
+        "wasteTypes": { "type": "array" },
+        "price": { "type": "number" },
+        "status": { "type": "string", "enum": ["Pending", "Accepted", "Completed", "Cancelled"] },
+        "paymentMethod": { "type": "string" },
+        "pointsAwarded": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": [
+        "id",
+        "userId",
+        "address",
+        "phone",
+        "date",
+        "timeSlot",
+        "bagsCount",
+        "wasteTypes",
+        "price",
+        "status",
+        "paymentMethod",
+        "pointsAwarded",
+        "createdAt"
+      ]
+    },
+    "Dispute": {
+      "title": "Dispute",
+      "description": "A dispute ticket raised for a pickup",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "pickupId": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Resolved", "Rejected"] },
+        "resolution": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "pickupId", "category", "description", "status", "createdAt"]
+    },
+    "WalletTransaction": {
+      "title": "WalletTransaction",
+      "description": "A transaction log representing credit, debit, funding, of the in-app wallet.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["funding", "pickup_payment", "refund", "reward"] },
+        "amount": { "type": "number" },
+        "description": { "type": "string" },
+        "date": { "type": "string" },
+        "status": { "type": "string", "enum": ["Success", "Failed", "Pending"] }
+      },
+      "required": ["id", "userId", "type", "amount", "description", "date", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stores core profile and points state for each registered user."
+    },
+    "/pickups/{pickupId}": {
+      "schema": "Pickup",
+      "description": "Stores structured scheduling logs and delivery statuses for cleanups."
+    },
+    "/disputes/{disputeId}": {
+      "schema": "Dispute",
+      "description": "Stores user dispute tickets raised in case of pickup issues."
+    },
+    "/transactions/{txnId}": {
+      "schema": "WalletTransaction",
+      "description": "Stores audit trials of wallet deposit, spending, and points events."
+    }
+  }
+}

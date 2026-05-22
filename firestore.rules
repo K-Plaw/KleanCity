@@ -1,0 +1,110 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Gate: Deny all operations by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- reusable hard security helper functions ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Entity Schemas & Validation Blueprints ---
+
+    function isValidUser(data) {
+      return data.uid is string && data.uid.size() <= 128
+          && data.firstName is string && data.firstName.size() >= 1 && data.firstName.size() <= 100
+          && data.lastName is string && data.lastName.size() >= 1 && data.lastName.size() <= 100
+          && data.email is string && data.email.size() <= 150
+          && data.points is int && data.points >= 0
+          && data.walletBalance is number && data.walletBalance >= 0
+          && data.referralCode is string && data.referralCode.size() <= 50;
+    }
+
+    function isValidPickup(data) {
+      return data.id is string && data.id.size() <= 100
+          && data.userId is string && data.userId.size() <= 128
+          && data.address is string && data.address.size() <= 500
+          && data.phone is string && data.phone.size() <= 50
+          && data.date is string && data.date.size() <= 50
+          && data.timeSlot is string && data.timeSlot.size() <= 100
+          && data.bagsCount is int && data.bagsCount >= 0
+          && data.price is number && data.price >= 0
+          && data.status is string && (data.status == 'Pending' || data.status == 'Accepted' || data.status == 'Completed' || data.status == 'Cancelled')
+          && data.paymentMethod is string && data.paymentMethod.size() <= 100
+          && data.pointsAwarded is bool
+          && data.createdAt is string;
+    }
+
+    function isValidDispute(data) {
+      return data.id is string && data.id.size() <= 100
+          && data.userId is string && data.userId.size() <= 128
+          && data.pickupId is string && data.pickupId.size() <= 100
+          && data.category is string && data.category.size() <= 200
+          && data.description is string && data.description.size() <= 2000
+          && data.status is string && (data.status == 'Pending' || data.status == 'Resolved' || data.status == 'Rejected')
+          && data.createdAt is string;
+    }
+
+    function isValidTransaction(data) {
+      return data.id is string && data.id.size() <= 100
+          && data.userId is string && data.userId.size() <= 128
+          && data.type is string && (data.type == 'funding' || data.type == 'pickup_payment' || data.type == 'refund' || data.type == 'reward')
+          && data.amount is number && data.amount >= 0
+          && data.description is string && data.description.size() <= 300
+          && data.date is string
+          && data.status is string && (data.status == 'Success' || data.status == 'Failed' || data.status == 'Pending');
+    }
+
+    // --- Route Matches & Operations Gateways ---
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming());
+      allow delete: if false;
+    }
+
+    match /pickups/{pickupId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidPickup(incoming()) && isValidId(pickupId);
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && incoming().userId == request.auth.uid && isValidPickup(incoming()) && isValidId(pickupId);
+      allow delete: if false;
+    }
+
+    match /disputes/{disputeId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidDispute(incoming()) && isValidId(disputeId);
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && incoming().userId == request.auth.uid && isValidDispute(incoming()) && isValidId(disputeId);
+      allow delete: if false;
+    }
+
+    match /transactions/{txnId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidTransaction(incoming()) && isValidId(txnId);
+      allow update, delete: if false; // Write-once immutable logs
+    }
+  }
+}

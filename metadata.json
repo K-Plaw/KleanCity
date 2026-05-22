@@ -1,0 +1,6 @@
+{
+  "name": "KleanCity",
+  "description": "On-demand waste pickup and recycling rewards platform for Lagos households.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
