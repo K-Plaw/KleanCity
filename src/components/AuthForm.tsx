@@ -9,16 +9,53 @@ interface AuthFormProps {
 }
 
 export default function AuthForm({ type, setView }: AuthFormProps) {
-  const { login, signup } = useKleanStore();
+  const { login, signup, checkReferralCodeValidity } = useKleanStore();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const [isReferralValid, setIsReferralValid] = useState(true);
+  const [isCheckingReferral, setIsCheckingReferral] = useState(false);
+  const [referralError, setReferralError] = useState('');
+
+  React.useEffect(() => {
+    if (type !== 'register') return;
+    const trimmed = referralCode.trim();
+    if (!trimmed) {
+      setIsReferralValid(true);
+      setReferralError('');
+      setIsCheckingReferral(false);
+      return;
+    }
+
+    setIsCheckingReferral(true);
+    setReferralError('');
+
+    const delayDebounce = setTimeout(async () => {
+      try {
+        const isValid = await checkReferralCodeValidity(trimmed);
+        setIsReferralValid(isValid);
+        if (!isValid) {
+          setReferralError('The entered referral code is invalid. Please double-check or leave blank.');
+        } else {
+          setReferralError('');
+        }
+      } catch (err) {
+        console.error("Referral validation issue:", err);
+      } finally {
+        setIsCheckingReferral(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(delayDebounce);
+  }, [referralCode, type, checkReferralCodeValidity]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +72,10 @@ export default function AuthForm({ type, setView }: AuthFormProps) {
         setErrorMsg('Passwords do not match.');
         return;
       }
+      if (!isReferralValid) {
+        setErrorMsg('The entered referral code is invalid. Please double-check or leave blank.');
+        return;
+      }
     } else {
       if (!email || !password) {
         // EXACT VALIDATION MESSAGE SPECIFIED: "Please fill in necessary fields."
@@ -49,7 +90,7 @@ export default function AuthForm({ type, setView }: AuthFormProps) {
     (async () => {
       try {
         if (type === 'register') {
-          const success = await signup(firstName, lastName, email, password);
+          const success = await signup(firstName, lastName, email, password, referralCode);
           if (success) {
             setView('dashboard');
           }
@@ -195,6 +236,43 @@ export default function AuthForm({ type, setView }: AuthFormProps) {
             </div>
           )}
 
+          {/* Referral Code (Optional) */}
+          {type === 'register' && (
+            <div className="space-y-1.5 text-left">
+              <label className="text-xs font-bold text-slate-700 tracking-wide uppercase flex justify-between items-center">
+                <span>Referral Code (Optional)</span>
+                {isCheckingReferral ? (
+                  <span className="text-[10px] text-slate-500 normal-case font-bold animate-pulse">Verifying code...</span>
+                ) : isReferralValid && referralCode.trim() ? (
+                  <span className="text-[10px] text-klean-green normal-case font-bold">✓ Code Valid (+100 Welcome Points)</span>
+                ) : (
+                  <span className="text-[10px] text-klean-green normal-case font-bold">+100 Welcome Points</span>
+                )}
+              </label>
+              <input 
+                type="text" 
+                value={referralCode}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setReferralCode(val);
+                  if (!val.trim()) {
+                    setIsReferralValid(true);
+                    setReferralError('');
+                    setIsCheckingReferral(false);
+                  }
+                }}
+                placeholder="e.g. PRAIS987" 
+                className={`w-full px-4 py-3 bg-slate-50 border ${!isReferralValid ? 'border-red-500 focus:border-red-500 bg-red-50/50' : 'border-slate-200 focus:border-klean-navy/30'} rounded-xl text-sm focus:outline-none focus:bg-white transition-all text-slate-800 font-bold uppercase placeholder:normal-case placeholder:font-medium`}
+              />
+              {referralError && (
+                <p className="text-[11px] text-red-600 font-bold mt-1 flex items-center gap-1 animate-pulse">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" />
+                  {referralError}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Remember Me box (only for login) */}
           {type === 'login' && (
             <div className="flex items-center justify-between text-xs py-1">
@@ -208,11 +286,13 @@ export default function AuthForm({ type, setView }: AuthFormProps) {
           {/* Primary Submit Button */}
           <button 
             type="submit" 
-            disabled={isLoading}
-            className="w-full bg-slate-950 hover:bg-slate-900 border border-transparent disabled:bg-slate-400 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all active:scale-98 tracking-wide cursor-pointer text-sm flex items-center justify-center gap-2 mt-2"
+            disabled={isLoading || (type === 'register' && (!isReferralValid || isCheckingReferral))}
+            className="w-full bg-slate-950 hover:bg-slate-900 border border-transparent disabled:bg-slate-300 disabled:text-slate-500 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all active:scale-98 tracking-wide cursor-pointer text-sm flex items-center justify-center gap-2 mt-2"
           >
             {isLoading ? (
               <span className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+            ) : isCheckingReferral ? (
+              <span>Verifying Referral Code...</span>
             ) : (
               <span>{type === 'register' ? 'Create Account' : 'Sign In'}</span>
             )}

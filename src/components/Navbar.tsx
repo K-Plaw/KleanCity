@@ -9,7 +9,7 @@ interface NavbarProps {
 }
 
 export default function Navbar({ currentView, setView }: NavbarProps) {
-  const { currentUser, logout } = useKleanStore();
+  const { currentUser, logout, setShowLogoutConfirm } = useKleanStore();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleNavClick = (view: string) => {
@@ -17,9 +17,8 @@ export default function Navbar({ currentView, setView }: NavbarProps) {
     setMobileOpen(false);
   };
 
-  const handleLogout = () => {
-    logout();
-    setView('home');
+  const triggerLogoutConfirm = () => {
+    setShowLogoutConfirm(true);
     setMobileOpen(false);
   };
 
@@ -149,7 +148,7 @@ export default function Navbar({ currentView, setView }: NavbarProps) {
                   {currentUser.firstName[0]}
                 </div>
                 <button 
-                  onClick={handleLogout}
+                  onClick={triggerLogoutConfirm}
                   className="p-2 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50/50 transition-all ml-1"
                   title="Log Out"
                   id="navbar_logout_trigger"
@@ -271,7 +270,7 @@ export default function Navbar({ currentView, setView }: NavbarProps) {
                         <span className="text-[10px] text-klean-green font-mono font-bold mt-0.5">{currentUser.points.toLocaleString()} PTS</span>
                       </div>
                       <button 
-                        onClick={handleLogout}
+                        onClick={triggerLogoutConfirm}
                         className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-red-500 hover:bg-red-50/50 rounded-xl transition-colors border border-red-100/30"
                       >
                         <LogOut size={14} />

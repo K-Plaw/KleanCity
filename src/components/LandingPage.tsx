@@ -1,15 +1,35 @@
 import { motion } from 'motion/react';
 import { ArrowRight, Play, Calendar, ShieldCheck, Gift, Leaf, Recycle, Users, MapPin, Sparkles } from 'lucide-react';
+import { useKleanStore } from '../store/useKleanStore';
 
 interface LandingPageProps {
   setView: (view: string) => void;
 }
 
 export default function LandingPage({ setView }: LandingPageProps) {
+  const { getGlobalStats } = useKleanStore();
+  const dynamicStats = getGlobalStats();
+
   const stats = [
-    { value: '50K+', label: 'Active Users', desc: 'Growing community making a difference', icon: Users },
-    { value: '2M kg', label: 'Waste Recycled', desc: 'Total recyclable waste properly managed', icon: Recycle, highlight: true },
-    { value: '15+', label: 'Cities Served', desc: 'Expanding across cities for a cleaner future', icon: MapPin }
+    { 
+      value: dynamicStats.activeUsers.toString(), 
+      label: 'Active Users', 
+      desc: 'Growing community making a difference', 
+      icon: Users 
+    },
+    { 
+      value: `${dynamicStats.wasteRecycledKg.toLocaleString()} kg`, 
+      label: 'Waste Recycled', 
+      desc: 'Total recyclable waste properly managed', 
+      icon: Recycle, 
+      highlight: true 
+    },
+    { 
+      value: '1', 
+      label: 'Cities Served', 
+      desc: 'Exclusively serving Lagos, Nigeria', 
+      icon: MapPin 
+    }
   ];
 
   const steps = [

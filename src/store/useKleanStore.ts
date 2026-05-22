@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { UserProfile, Pickup, Dispute, WalletTransaction, SavedCard } from '../types';
+import { UserProfile, Pickup, Dispute, WalletTransaction, SavedCard, DropOffLog } from '../types';
 import { auth, db as firestoreDb, handleFirestoreError, OperationType } from '../lib/firebase';
 import { 
   signInWithEmailAndPassword, 
@@ -23,15 +23,18 @@ interface KleanState {
   transactions: WalletTransaction[];
   vouchersRedeemedCount: number;
   totalVouchersCount: number;
+  dropOffLogs: DropOffLog[];
+  showLogoutConfirm: boolean;
   toast: { message: string; type: 'success' | 'error' | 'info' } | null;
   
   // Actions
+  setShowLogoutConfirm: (show: boolean) => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   hideToast: () => void;
   login: (email: string, password?: string) => Promise<boolean>;
-  signup: (firstName: string, lastName: string, email: string, password?: string) => Promise<boolean>;
+  signup: (firstName: string, lastName: string, email: string, password?: string, referredBy?: string) => Promise<boolean>;
   localDatabaseLogin: (email: string, password?: string) => boolean;
-  localDatabaseSignup: (firstName: string, lastName: string, email: string, password?: string) => boolean;
+  localDatabaseSignup: (firstName: string, lastName: string, email: string, password?: string, referredBy?: string) => boolean;
   logout: () => void;
   fundWallet: (amount: number) => void;
   addCard: (brand: 'Visa' | 'Mastercard', last4: string, expiry: string) => void;
@@ -40,8 +43,12 @@ interface KleanState {
   cancelPickup: (id: string) => { success: boolean; error?: string };
   raiseDispute: (pickupId: string, category: string, description: string) => void;
   redeemVoucher: (pointsCost: number) => boolean;
-  logDropOff: (locationName: string) => void;
+  logDropOff: (locationName: string, isAtStation?: boolean, coords?: string) => void;
+  adminApproveDropOff: (logId: string) => void;
+  adminRejectDropOff: (logId: string) => void;
   simulateCollectorUpdate: (id: string, newStatus: 'Pending' | 'Accepted' | 'Completed') => void;
+  getGlobalStats: () => { activeUsers: number; wasteRecycledKg: number; citiesServed: number };
+  checkReferralCodeValidity: (code: string) => Promise<boolean>;
 }
 
 // Initial dummy data matched exactly to uploaded screenshots
@@ -50,16 +57,24 @@ const initialUser: UserProfile = {
   firstName: 'John',
   lastName: 'Doe',
   email: 'you@example.com',
-  points: 1250,
+  points: 0,
   walletBalance: 5000,
-  referralCode: 'KLEAN2026',
-  referralsInvited: 8,
-  referralsJoined: 5,
-  referralsPointsEarned: 500,
+  referralCode: 'JOHND123',
+  referralsInvited: 0,
+  referralsJoined: 0,
+  referralsPointsEarned: 0,
   savedCards: [
     { id: 'card_1', brand: 'Visa', last4: '4532', expiry: '12/26' },
     { id: 'card_2', brand: 'Mastercard', last4: '8901', expiry: '08/27' }
   ]
+};
+
+const generateReferralCode = (firstName: string, lastName: string): string => {
+  const fPart = firstName.trim().toUpperCase().replace(/[^A-Z]/g, '');
+  const lPart = lastName.trim().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
+  const prefix = fPart ? (fPart + lPart).slice(0, 5) : 'KLEAN';
+  const num = Math.floor(100 + Math.random() * 900);
+  return `${prefix}${num}`;
 };
 
 const initialPickups: Pickup[] = [
@@ -191,6 +206,7 @@ interface UserRecord {
   transactions: WalletTransaction[];
   vouchersRedeemedCount: number;
   totalVouchersCount: number;
+  dropOffLogs?: DropOffLog[];
 }
 
 // Clean helper to access authentic local database
@@ -198,7 +214,23 @@ const getUsersDb = (): Record<string, UserRecord> => {
   try {
     const raw = localStorage.getItem('kleancity_users_db');
     if (raw) {
-      return JSON.parse(raw);
+      const dbInstance = JSON.parse(raw);
+      // Ensure all users utilize custom name-coined referral codes
+      if (dbInstance['you@example.com']?.profile) {
+        dbInstance['you@example.com'].profile.referralCode = 'JOHND123';
+        // Force reset referrals to 0 to dynamically increase when new users register with their code
+        dbInstance['you@example.com'].profile.referralsInvited = 0;
+        dbInstance['you@example.com'].profile.referralsJoined = 0;
+        dbInstance['you@example.com'].profile.referralsPointsEarned = 0;
+      }
+      if (dbInstance['praislaw@gmail.com']?.profile) {
+        dbInstance['praislaw@gmail.com'].profile.referralCode = 'PRAIS987';
+        // Force reset referrals to 0 to dynamically increase when new users register with their code
+        dbInstance['praislaw@gmail.com'].profile.referralsInvited = 0;
+        dbInstance['praislaw@gmail.com'].profile.referralsJoined = 0;
+        dbInstance['praislaw@gmail.com'].profile.referralsPointsEarned = 0;
+      }
+      return dbInstance;
     }
   } catch {}
 
@@ -219,12 +251,12 @@ const getUsersDb = (): Record<string, UserRecord> => {
         firstName: 'Prais',
         lastName: 'Law',
         email: 'praislaw@gmail.com',
-        points: 2500,
+        points: 0,
         walletBalance: 12000,
-        referralCode: 'KLEANPRAIS',
-        referralsInvited: 15,
-        referralsJoined: 10,
-        referralsPointsEarned: 1000,
+        referralCode: 'PRAIS987',
+        referralsInvited: 0,
+        referralsJoined: 0,
+        referralsPointsEarned: 0,
         savedCards: [
           { id: 'card_1', brand: 'Visa', last4: '1111', expiry: '05/29' }
         ]
@@ -321,6 +353,7 @@ export const useKleanStore = create<KleanState>((set, get) => {
   const initialLoadedTransactions = activeRecord ? activeRecord.transactions : [];
   const initialLoadedVRedeemed = activeRecord ? activeRecord.vouchersRedeemedCount : 0;
   const initialLoadedTVouchers = activeRecord ? activeRecord.totalVouchersCount : 0;
+  const initialLoadedDropOffLogs = activeRecord ? (activeRecord.dropOffLogs || []) : [];
 
   // Single synced updates handler to synchronize client state to users DB seamlessly
   const syncWithDb = async (updated: Partial<KleanState>) => {
@@ -342,7 +375,8 @@ export const useKleanStore = create<KleanState>((set, get) => {
             disputes: latestState.disputes,
             transactions: latestState.transactions,
             vouchersRedeemedCount: latestState.vouchersRedeemedCount,
-            totalVouchersCount: latestState.totalVouchersCount
+            totalVouchersCount: latestState.totalVouchersCount,
+            dropOffLogs: latestState.dropOffLogs
           };
           saveUsersDb(dbInstance);
         }
@@ -393,7 +427,11 @@ export const useKleanStore = create<KleanState>((set, get) => {
     transactions: initialLoadedTransactions,
     vouchersRedeemedCount: initialLoadedVRedeemed,
     totalVouchersCount: initialLoadedTVouchers,
+    dropOffLogs: initialLoadedDropOffLogs,
+    showLogoutConfirm: false,
     toast: null,
+
+    setShowLogoutConfirm: (show) => set({ showLogoutConfirm: show }),
 
     showToast: (message, type = 'info') => {
       set({ toast: { message, type } });
@@ -531,7 +569,7 @@ export const useKleanStore = create<KleanState>((set, get) => {
       }
     },
 
-    localDatabaseSignup: (firstName: string, lastName: string, email: string, password?: string) => {
+    localDatabaseSignup: (firstName: string, lastName: string, email: string, password?: string, referredBy?: string) => {
       const dbInstance = getUsersDb();
       const signupEmail = email.toLowerCase().trim();
 
@@ -541,19 +579,52 @@ export const useKleanStore = create<KleanState>((set, get) => {
 
       const defaultPass = password || 'password';
 
+      // Coin names-coined unique referral code
+      const customReferralCode = generateReferralCode(firstName, lastName);
+
+      // Check for valid referrer & award referee points bonus
+      let referrerEmail: string | null = null;
+      let matchedReferralPoints = 0;
+      if (referredBy) {
+        const uppercaseRef = referredBy.trim().toUpperCase();
+        for (const emailKey of Object.keys(dbInstance)) {
+          if (dbInstance[emailKey].profile.referralCode?.toUpperCase() === uppercaseRef) {
+            referrerEmail = emailKey;
+            matchedReferralPoints = 100; // 100 welcome points for registering with ref code
+            break;
+          }
+        }
+      }
+
       const newUserProfile: UserProfile = {
         uid: `user_${Date.now()}`,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: signupEmail,
-        points: 0,
+        points: matchedReferralPoints,
         walletBalance: 10000,
-        referralCode: `KLEAN${Math.floor(1000 + Math.random() * 9000)}`,
+        referralCode: customReferralCode,
         referralsInvited: 0,
         referralsJoined: 0,
         referralsPointsEarned: 0,
         savedCards: []
       };
+
+      // Award Points & stats to Referrer (150 Points Accredited to Referrer)
+      if (referrerEmail) {
+        const referrerRecord = dbInstance[referrerEmail];
+        const updatedReferrerProfile = {
+          ...referrerRecord.profile,
+          referralsInvited: (referrerRecord.profile.referralsInvited || 0) + 1,
+          referralsJoined: (referrerRecord.profile.referralsJoined || 0) + 1,
+          referralsPointsEarned: (referrerRecord.profile.referralsPointsEarned || 0) + 150,
+          points: (referrerRecord.profile.points || 0) + 150
+        };
+        dbInstance[referrerEmail] = {
+          ...referrerRecord,
+          profile: updatedReferrerProfile
+        };
+      }
 
       const newRecord: UserRecord = {
         profile: newUserProfile,
@@ -581,11 +652,16 @@ export const useKleanStore = create<KleanState>((set, get) => {
         totalVouchersCount: 0
       });
 
-      get().showToast('Account created successfully! (Local database)', 'success');
+      get().showToast(referredBy && !referrerEmail 
+        ? 'Account created successfully! (Referral code was invalid)' 
+        : referrerEmail 
+          ? `Account created successfully with referral! You and your referrer both earned points.` 
+          : 'Account created successfully! (Local database)', 
+        'success');
       return true;
     },
 
-    signup: async (firstName: string, lastName: string, email: string, password?: string) => {
+    signup: async (firstName: string, lastName: string, email: string, password?: string, referredBy?: string) => {
       const signupEmail = email.toLowerCase().trim();
       const defaultPassword = password || 'password';
 
@@ -594,19 +670,74 @@ export const useKleanStore = create<KleanState>((set, get) => {
         const credentials = await createUserWithEmailAndPassword(auth, signupEmail, defaultPassword);
         const uid = credentials.user.uid;
 
+        // Coin names-coined unique referral code
+        const customReferralCode = generateReferralCode(firstName, lastName);
+
+        // Check for valid referrer & award points in real dynamic cloud/local database
+        let referrerUid: string | null = null;
+        let referrerData: any = null;
+        let localReferrerEmail: string | null = null;
+        let matchedReferralPoints = 0;
+
+        const dbInstance = getUsersDb();
+
+        if (referredBy) {
+          const trimmedRef = referredBy.trim().toUpperCase();
+          
+          // Check local database first
+          for (const emailKey of Object.keys(dbInstance)) {
+            if (dbInstance[emailKey].profile.referralCode?.toUpperCase() === trimmedRef) {
+              localReferrerEmail = emailKey;
+              matchedReferralPoints = 100;
+              break;
+            }
+          }
+
+          // Check firestore too
+          try {
+            const q = query(collection(firestoreDb, 'users'), where('referralCode', '==', trimmedRef));
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+              const rDoc = querySnapshot.docs[0];
+              referrerUid = rDoc.id;
+              referrerData = rDoc.data();
+              matchedReferralPoints = 100; // Award newcomer welcome points
+            }
+          } catch (err) {
+            console.warn("Could not query Firestore for referral code verification:", err);
+          }
+        }
+
+        const isReferralCodeReallyValid = !!(referrerUid || localReferrerEmail);
+
         const newUserProfile: UserProfile = {
           uid: uid,
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           email: signupEmail,
-          points: 0,
+          points: matchedReferralPoints,
           walletBalance: 10000, // Pre-funded with ₦10,000 for instant app utility
-          referralCode: `KLEAN${Math.floor(1000 + Math.random() * 9000)}`,
+          referralCode: customReferralCode,
           referralsInvited: 0,
           referralsJoined: 0,
           referralsPointsEarned: 0,
           savedCards: []
         };
+
+        // If referrer found in cloud, reward them inside Cloud / Firestore
+        if (referrerUid && referrerData) {
+          try {
+            await setDoc(doc(firestoreDb, 'users', referrerUid), {
+              ...referrerData,
+              referralsInvited: (referrerData.referralsInvited || 0) + 1,
+              referralsJoined: (referrerData.referralsJoined || 0) + 1,
+              referralsPointsEarned: (referrerData.referralsPointsEarned || 0) + 150,
+              points: (referrerData.points || 0) + 150
+            });
+          } catch (err) {
+            console.warn("Could not write updated stats to referrer doc in Firestore:", err);
+          }
+        }
 
         // Create User Profile doc in Firestore
         try {
@@ -618,6 +749,32 @@ export const useKleanStore = create<KleanState>((set, get) => {
         } catch (err) {
           return handleFirestoreError(err, OperationType.CREATE, `users/${uid}`);
         }
+
+        // Award Referrer inside Local Database (150 Points Accredited to Referrer)
+        if (localReferrerEmail) {
+          const rRecord = dbInstance[localReferrerEmail];
+          dbInstance[localReferrerEmail] = {
+            ...rRecord,
+            profile: {
+              ...rRecord.profile,
+              referralsInvited: (rRecord.profile.referralsInvited || 0) + 1,
+              referralsJoined: (rRecord.profile.referralsJoined || 0) + 1,
+              referralsPointsEarned: (rRecord.profile.referralsPointsEarned || 0) + 150,
+              points: (rRecord.profile.points || 0) + 150
+            }
+          };
+        }
+
+        dbInstance[signupEmail] = {
+          profile: newUserProfile,
+          passwordHash: defaultPassword,
+          pickups: [],
+          disputes: [],
+          transactions: [],
+          vouchersRedeemedCount: 0,
+          totalVouchersCount: 0
+        };
+        saveUsersDb(dbInstance);
 
         try {
           localStorage.setItem('kleancity_current_user_email', signupEmail);
@@ -632,7 +789,12 @@ export const useKleanStore = create<KleanState>((set, get) => {
           totalVouchersCount: 0
         });
 
-        get().showToast('Account created successfully in Firebase!', 'success');
+        get().showToast(referredBy && !isReferralCodeReallyValid
+          ? 'Account created successfully in Firebase! (Referral code was invalid)'
+          : isReferralCodeReallyValid
+            ? `Account created successfully with referral! You and your referrer both earned points.`
+            : 'Account created successfully in Firebase!', 
+          'success');
         return true;
 
       } catch (authError: any) {
@@ -644,7 +806,7 @@ export const useKleanStore = create<KleanState>((set, get) => {
           authError.message?.includes('disabled')
         ) {
           console.warn("Email/Password Auth provider disabled in console. Routing to Local Database Fallback.");
-          return get().localDatabaseSignup(firstName, lastName, signupEmail, defaultPassword);
+          return get().localDatabaseSignup(firstName, lastName, signupEmail, defaultPassword, referredBy);
         }
 
         let errMsg = authError.message || String(authError);
@@ -851,33 +1013,96 @@ export const useKleanStore = create<KleanState>((set, get) => {
       return true;
     },
 
-    logDropOff: (locationName) => {
+    logDropOff: (locationName, isAtStation = false, coords = 'Undetected') => {
       const user = get().currentUser;
       if (!user) return;
 
-      // Award +10 KleanPoints
+      if (!isAtStation) {
+        get().showToast(`Verification failed: You are not physically at the ${locationName} drop-off station! Points cannot be awarded.`, 'error');
+        return;
+      }
+
+      // Record pending log to wait for admin vetting
+      const newLog: DropOffLog = {
+        id: `DROP-${Math.floor(1000 + Math.random() * 9000)}`,
+        userId: user.uid,
+        stationName: locationName,
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        gpsCoordinates: coords,
+        verifiedLocation: true,
+        status: 'Pending',
+        pointsAwarded: 10
+      };
+
+      const updatedLogs = [newLog, ...get().dropOffLogs];
+
+      syncWithDb({
+        dropOffLogs: updatedLogs
+      });
+
+      get().showToast(`Drop-off registered successfully at ${locationName}! Sent to Lagos City Recycle Admin for vetting.`, 'info');
+    },
+
+    adminApproveDropOff: (logId) => {
+      const user = get().currentUser;
+      if (!user) return;
+
+      const log = get().dropOffLogs.find(l => l.id === logId);
+      if (!log || log.status !== 'Pending') return;
+
+      const updatedLogs = get().dropOffLogs.map(l => {
+        if (l.id === logId) {
+          return { ...l, status: 'Approved' as const };
+        }
+        return l;
+      });
+
+      const pointsToAward = log.pointsAwarded || 10;
       const updatedUser = {
         ...user,
-        points: user.points + 10
+        points: user.points + pointsToAward
       };
 
       const newTxn: WalletTransaction = {
         id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
         userId: user.uid,
         type: 'reward',
-        amount: 10, // representing +10 points in dynamic log entries
-        description: `Drop-off Reward at ${locationName}`,
+        amount: pointsToAward,
+        description: `Verified Drop-off reward at ${log.stationName}`,
         date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         status: 'Success'
       };
 
       const txns = [newTxn, ...get().transactions];
 
-      syncWithDb({ 
+      syncWithDb({
         currentUser: updatedUser,
+        dropOffLogs: updatedLogs,
         transactions: txns
       });
-      get().showToast(`Logged Drop-Off! +10 KleanPoints awarded!`, 'success');
+
+      get().showToast(`Admin vetted and APPROVED drop-off! +10 KleanPoints credited to your balance.`, 'success');
+    },
+
+    adminRejectDropOff: (logId) => {
+      const user = get().currentUser;
+      if (!user) return;
+
+      const log = get().dropOffLogs.find(l => l.id === logId);
+      if (!log || log.status !== 'Pending') return;
+
+      const updatedLogs = get().dropOffLogs.map(l => {
+        if (l.id === logId) {
+          return { ...l, status: 'Rejected' as const };
+        }
+        return l;
+      });
+
+      syncWithDb({
+        dropOffLogs: updatedLogs
+      });
+
+      get().showToast(`Admin vetted and REJECTED drop-off report at ${log.stationName}.`, 'error');
     },
 
     simulateCollectorUpdate: (id, newStatus) => {
@@ -902,6 +1127,54 @@ export const useKleanStore = create<KleanState>((set, get) => {
       });
 
       syncWithDb({ pickups: updatedPickups });
+    },
+
+    getGlobalStats: () => {
+      const dbInstance = getUsersDb();
+      const emails = Object.keys(dbInstance);
+      const activeUsers = emails.length;
+
+      let totalBags = 0;
+      emails.forEach(email => {
+        const record = dbInstance[email];
+        if (record && record.pickups) {
+          record.pickups.forEach(p => {
+            totalBags += p.bagsCount;
+          });
+        }
+      });
+
+      // Assume each waste bag is on average 25kg
+      return {
+        activeUsers,
+        wasteRecycledKg: totalBags * 25,
+        citiesServed: 1
+      };
+    },
+
+    checkReferralCodeValidity: async (code: string): Promise<boolean> => {
+      if (!code || !code.trim()) return true;
+      const cleanCode = code.trim().toUpperCase();
+
+      // Check local DB first
+      const dbInstance = getUsersDb();
+      const codeInLocal = Object.values(dbInstance).some(
+        record => record.profile.referralCode?.toUpperCase() === cleanCode
+      );
+      if (codeInLocal) return true;
+
+      // Check Firestore
+      try {
+        const q = query(collection(firestoreDb, 'users'), where('referralCode', '==', cleanCode));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          return true;
+        }
+      } catch (err) {
+        console.warn("Firestore referral check error:", err);
+      }
+
+      return false;
     }
   };
 });

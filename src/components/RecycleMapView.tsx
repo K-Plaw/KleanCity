@@ -5,9 +5,10 @@ import { MapPin, Search, Navigation, Milestone, Sparkles, Filter, Check } from '
 import { RecyclingPoint } from '../types';
 
 export default function RecycleMapView() {
-  const { logDropOff, currentUser } = useKleanStore();
+  const { logDropOff, currentUser, dropOffLogs, adminApproveDropOff, adminRejectDropOff } = useKleanStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPoint, setSelectedPoint] = useState<RecyclingPoint | null>(null);
+  const [isSimulatedAtStation, setIsSimulatedAtStation] = useState(false);
   
   // Directions simulation state
   const [showDirectionsRoute, setShowDirectionsRoute] = useState(false);
@@ -73,7 +74,7 @@ export default function RecycleMapView() {
 
   // Log Drop-off rewarding
   const handleLogDropOffClick = (pt: RecyclingPoint) => {
-    logDropOff(pt.name);
+    logDropOff(pt.name, isSimulatedAtStation, `LAG-${pt.latitude}.${pt.longitude}`);
   };
 
   // Searching logic
@@ -162,10 +163,10 @@ export default function RecycleMapView() {
           <div className="bg-yellow-50 border border-yellow-105 p-4 rounded-2xl text-left">
             <span className="text-[10px] font-extrabold uppercase tracking-wide text-yellow-800 flex items-center gap-1">
               <Sparkles size={12} className="animate-pulse" />
-              <span>LOG MY DROP-OFF REWARDRY</span>
+              <span>LOG MY DROP-OFF REWARDING</span>
             </span>
             <p className="text-[11px] text-yellow-750 font-semibold mt-1 leading-relaxed">
-              Arrived at a center? Click "Log My Drop-Off" inside the node details trigger to instantly claim +10 loyalty KleanPoints!
+              Arrived at a center? Choose "Teleport to Station" on the selected station details, then click "Log My Drop-Off" so city admins can vet and credit +10 KleanPoints safely!
             </p>
           </div>
         </div>
@@ -253,6 +254,47 @@ export default function RecycleMapView() {
                 exit={{ y: 50, opacity: 0 }}
                 className="bg-slate-900 border-t border-slate-800 p-6 space-y-4 text-left z-20"
               >
+                {/* Geolocation Verification Bar */}
+                <div className="bg-slate-950 rounded-2xl p-4 border border-slate-850 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">Device Geolocation Status</span>
+                    {isSimulatedAtStation ? (
+                      <div className="flex items-center gap-2 text-emerald-400 font-mono text-xs font-bold">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>Arrived & Verified At Station GPS Coordinates</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-rose-400 font-mono text-xs font-bold">
+                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                        <span>Not Co-located (Distance: 12.4 km away)</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setIsSimulatedAtStation(false)}
+                      className={`px-3 py-1.5 rounded-lg border font-mono text-[10px] font-bold transition-all cursor-pointer ${
+                        !isSimulatedAtStation
+                          ? 'bg-rose-950/40 text-rose-300 border-rose-800'
+                          : 'bg-slate-800/40 text-slate-500 border-slate-700 hover:text-slate-300'
+                      }`}
+                    >
+                      Away (Default)
+                    </button>
+                    <button
+                      onClick={() => setIsSimulatedAtStation(true)}
+                      className={`px-3 py-1.5 rounded-lg border font-mono text-[10px] font-bold transition-all cursor-pointer ${
+                        isSimulatedAtStation
+                          ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800'
+                          : 'bg-slate-800/40 text-slate-500 border-slate-700 hover:text-slate-300'
+                      }`}
+                    >
+                      Teleport to Station
+                    </button>
+                  </div>
+                </div>
+
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
                     <h3 className="font-display font-bold text-lg text-white">{selectedPoint.name}</h3>
@@ -303,6 +345,92 @@ export default function RecycleMapView() {
             )}
           </AnimatePresence>
 
+        </div>
+
+      </div>
+
+      {/* Geolocation Verification & Admin Vetting Control Panels */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-slate-200/60 pt-8" id="dropoff_vetting_dashboards">
+        
+        {/* User Stats Tracking */}
+        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4 text-left">
+          <div className="flex items-center gap-2">
+            <Milestone className="text-slate-500 font-bold" size={20} />
+            <div>
+              <h3 className="font-display font-semibold text-lg text-slate-800">Your Drop-Off History</h3>
+              <p className="text-xs text-slate-400">Track and monitor your logged drop-off logs.</p>
+            </div>
+          </div>
+
+          <div className="space-y-3 max-h-[300px] overflow-y-auto">
+            {dropOffLogs.length === 0 ? (
+              <div className="p-8 text-center bg-slate-50 rounded-2xl text-xs text-slate-400 font-medium">
+                No drop-off logs submitted yet. Locate a recycling station and click "Log My Drop-Off".
+              </div>
+            ) : (
+              dropOffLogs.map((log) => (
+                <div key={log.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
+                  <div className="space-y-1">
+                    <span className="font-display font-medium text-slate-800">{log.stationName}</span>
+                    <span className="block text-[10px] text-slate-450 font-mono">{log.date} • GPS: {log.gpsCoordinates}</span>
+                  </div>
+
+                  <span className={`px-2.5 py-1 rounded-full font-bold text-[9px] uppercase border ${
+                    log.status === 'Approved' 
+                      ? 'bg-emerald-100 border-emerald-200 text-emerald-700' 
+                      : log.status === 'Rejected'
+                        ? 'bg-red-100 border-red-200 text-red-700'
+                        : 'bg-amber-100 border-amber-200 text-amber-700'
+                  }`}>
+                    {log.status === 'Pending' ? 'Pending Vet' : log.status}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Admin Vetting Control Dashboard */}
+        <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 shadow-sm space-y-4 text-left text-white">
+          <div className="flex items-center gap-2">
+            <Sparkles className="text-klean-green" size={20} />
+            <div>
+              <h3 className="font-display font-medium text-lg text-white">Admin Drop-Off Vetting Center</h3>
+              <p className="text-xs text-slate-400">Manage drop-offs and approve credits securely.</p>
+            </div>
+          </div>
+
+          <div className="space-y-3 max-h-[300px] overflow-y-auto">
+            {dropOffLogs.filter(l => l.status === 'Pending').length === 0 ? (
+              <div className="p-8 text-center bg-slate-950/60 rounded-2xl border border-slate-850 text-xs text-slate-500 font-medium">
+                No pending drop-off reports to vet. Submit a GPS verified drop-off report above first!
+              </div>
+            ) : (
+              dropOffLogs.filter(l => l.status === 'Pending').map((log) => (
+                <div key={log.id} className="p-4 rounded-2xl bg-slate-950 border border-slate-850 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="space-y-1">
+                    <span className="font-display font-medium text-white">{log.stationName}</span>
+                    <span className="block text-[10px] text-slate-500 font-mono">User ID: ...{log.userId.slice(-6)} • Coordinates: {log.gpsCoordinates}</span>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => adminRejectDropOff(log.id)}
+                      className="bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-xl font-bold text-[10px] transition-all cursor-pointer"
+                    >
+                      Reject
+                    </button>
+                    <button
+                      onClick={() => adminApproveDropOff(log.id)}
+                      className="bg-klean-green hover:bg-klean-green-hover text-white px-3 py-1.5 rounded-xl font-bold text-[10px] transition-all cursor-pointer shadow-md"
+                    >
+                      Approve (+10)
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
       </div>

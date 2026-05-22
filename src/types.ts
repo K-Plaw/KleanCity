@@ -81,3 +81,14 @@ export interface RecyclingPoint {
   description: string;
   materials: string[];
 }
+
+export interface DropOffLog {
+  id: string;
+  userId: string;
+  stationName: string;
+  date: string;
+  gpsCoordinates: string;
+  verifiedLocation: boolean;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  pointsAwarded: number;
+}

@@ -12,10 +12,10 @@ import WalletView from './components/WalletView';
 import DisputesView from './components/DisputesView';
 import RecycleMapView from './components/RecycleMapView';
 import FloatingEco from './components/FloatingEco';
-import { AlertCircle, X, MapPin } from 'lucide-react';
+import { AlertCircle, X, MapPin, LogOut } from 'lucide-react';
 
 export default function App() {
-  const { currentUser, toast, hideToast } = useKleanStore();
+  const { currentUser, toast, hideToast, showLogoutConfirm, setShowLogoutConfirm, logout } = useKleanStore();
   const [view, setView] = useState(currentUser ? 'dashboard' : 'home');
 
   // Watch protected states
@@ -138,6 +138,50 @@ export default function App() {
               </button>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Root-Level Logout Confirmation Dialog Modal */}
+      <AnimatePresence>
+        {showLogoutConfirm && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 0.99 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 max-w-sm w-full border border-slate-150 shadow-2xl relative text-center space-y-5 my-auto"
+            >
+              <div className="w-12 h-12 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto">
+                <LogOut size={22} />
+              </div>
+
+              <div className="space-y-1.5">
+                <h3 className="font-display font-medium text-xl text-slate-900">Are you sure you want to sign out?</h3>
+                <p className="text-xs text-slate-400">
+                  You will need to sign back in to schedule pickups, verify disputes, or buy reward airtime/data codes.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 text-xs rounded-xl flex-1 cursor-pointer transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    logout();
+                    setView('home');
+                    setShowLogoutConfirm(false);
+                  }}
+                  className="bg-red-650 hover:bg-red-750 text-white font-bold py-3 text-xs rounded-xl flex-1 cursor-pointer transition-all"
+                >
+                  Yes, Sign Out
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

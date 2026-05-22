@@ -184,12 +184,12 @@ export default function DisputesView() {
       {/* Create dispute sheet drawer dialog overlay */}
       <AnimatePresence>
         {isRaiseOpen && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-start justify-center p-4 z-50 overflow-y-auto">
             <motion.div
               initial={{ scale: 0.97, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.97, opacity: 0 }}
-              className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-slate-100 shadow-2xl text-left space-y-6"
+              className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-slate-100 shadow-2xl text-left space-y-6 mt-8 mb-16"
             >
               <div>
                 <h3 className="font-display font-bold text-xl text-slate-900">Raise Dispute Ticket</h3>
@@ -293,12 +293,12 @@ export default function DisputesView() {
       {/* Cancel Alert dialog satisfying EXACT STRING rule */}
       <AnimatePresence>
         {isCancelAlertOpen && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-start justify-center p-4 z-50 overflow-y-auto">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-slate-100 shadow-2xl relative text-center space-y-6"
+              className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-slate-100 shadow-2xl relative text-center space-y-6 mt-8 mb-16"
             >
               <div className="w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-2 animate-bounce">
                 <AlertTriangle size={24} />

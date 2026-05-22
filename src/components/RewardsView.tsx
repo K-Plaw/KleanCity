@@ -5,7 +5,7 @@ import { Award, ShoppingBag, Users, Clipboard, Check, Sparkles, AlertCircle, Ref
 import { RewardVoucher } from '../types';
 
 export default function RewardsView() {
-  const { currentUser, redeemVoucher, vouchersRedeemedCount, totalVouchersCount } = useKleanStore();
+  const { currentUser, redeemVoucher, vouchersRedeemedCount, totalVouchersCount, showToast } = useKleanStore();
   const [activeTab, setActiveTab] = useState<'redeem' | 'referral'>('redeem');
   const [copied, setCopied] = useState(false);
   
@@ -23,9 +23,28 @@ export default function RewardsView() {
   ];
 
   const handleCopyCode = () => {
-    // Avoid clipboard API blocking inside iframes - use purely state-based confirmation!
+    const code = currentUser?.referralCode || 'KLEAN2026';
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code);
+      }
+    } catch (err) {}
     setCopied(true);
+    showToast(`Referral code ${code} copied to clipboard!`, 'success');
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleShareLink = () => {
+    const code = currentUser?.referralCode || 'KLEAN2026';
+    const link = `https://kleancity.app/invite?ref=${code}`;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link);
+      }
+      showToast(`Referral link with code ${code} copied to clipboard!`, 'success');
+    } catch (err) {
+      showToast(`Referral link: ${link}`, 'info');
+    }
   };
 
   const handleRedeem = (item: RewardVoucher) => {
@@ -84,7 +103,7 @@ export default function RewardsView() {
           <div className="space-y-1">
             <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Referrals Gained</span>
             <p className="font-display font-bold text-2xl text-klean-navy tracking-tight">
-              {currentUser?.referralsJoined || 5} <span className="text-[10px] sm:text-xs text-slate-400">joined</span>
+              {currentUser?.referralsJoined ?? 0} <span className="text-[10px] sm:text-xs text-slate-400">joined</span>
             </p>
           </div>
           <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 border border-rose-200">
@@ -204,21 +223,21 @@ export default function RewardsView() {
               {/* Referral Invite statistics */}
               <div className="grid grid-cols-3 gap-4 pt-4 text-center">
                 <div className="bg-slate-50 p-4 border rounded-2xl border-slate-100">
-                  <span className="font-display font-bold text-xl text-slate-800">{currentUser?.referralsInvited || 8}</span>
+                  <span className="font-display font-bold text-xl text-slate-800">{currentUser?.referralsInvited ?? 0}</span>
                   <span className="block text-[10px] text-slate-400 font-bold uppercase mt-1">Invited</span>
                 </div>
                 <div className="bg-slate-50 p-4 border rounded-2xl border-slate-100">
-                  <span className="font-display font-bold text-xl text-slate-800">{currentUser?.referralsJoined || 5}</span>
+                  <span className="font-display font-bold text-xl text-slate-800">{currentUser?.referralsJoined ?? 0}</span>
                   <span className="block text-[10px] text-slate-400 font-bold uppercase mt-1">Joined</span>
                 </div>
                 <div className="bg-emerald-50/50 p-4 border rounded-2xl border-emerald-100">
-                  <span className="font-display font-bold text-xl text-emerald-600">{currentUser?.referralsPointsEarned || 500}</span>
+                  <span className="font-display font-bold text-xl text-emerald-600">{currentUser?.referralsPointsEarned ?? 0}</span>
                   <span className="block text-[10px] text-emerald-600 font-bold uppercase mt-1">PTS Gained</span>
                 </div>
               </div>
 
               <button
-                onClick={() => alert("Referral URL generated! Send this link to friends: https://kleancity.app/invite?" + (currentUser?.referralCode || 'KLEAN2026'))}
+                onClick={handleShareLink}
                 className="w-full bg-slate-950 hover:bg-slate-850 text-white font-bold py-3 px-4 rounded-xl shadow-xs transition-transform active:scale-98 text-xs cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <span>Share Referral Link</span>
