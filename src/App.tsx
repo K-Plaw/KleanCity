@@ -17,6 +17,30 @@ import { AlertCircle, X, MapPin, LogOut } from 'lucide-react';
 export default function App() {
   const { currentUser, toast, hideToast, showLogoutConfirm, setShowLogoutConfirm, logout } = useKleanStore();
   const [view, setView] = useState(currentUser ? 'dashboard' : 'home');
+  const [initialReferral, setInitialReferral] = useState('');
+
+  // Handle invite links and routing on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    let ref = params.get('ref') || params.get('invite') || params.get('code');
+    
+    // Also parse pathname like /invite/PRAIS987 or /invite?ref=PRAIS987
+    if (!ref && window.location.pathname.includes('/invite')) {
+      const pathParts = window.location.pathname.split('/');
+      // If path is /invite/PRAIS987
+      if (pathParts.length > 2 && pathParts[1] === 'invite' && pathParts[2]) {
+        ref = pathParts[2];
+      }
+    }
+
+    if (ref) {
+      const cleanRef = ref.trim().toUpperCase();
+      setInitialReferral(cleanRef);
+      if (!currentUser) {
+        setView('register');
+      }
+    }
+  }, [currentUser]);
 
   // Watch protected states
   useEffect(() => {
@@ -48,7 +72,7 @@ export default function App() {
       case 'login':
         return <AuthForm type="login" setView={setView} />;
       case 'register':
-        return <AuthForm type="register" setView={setView} />;
+        return <AuthForm type="register" setView={setView} defaultReferralCode={initialReferral} />;
       
       // Protected Dashboard views
       case 'dashboard':
@@ -78,7 +102,7 @@ export default function App() {
       <Navbar currentView={view} setView={setView} />
 
       {/* Main Container switching views with Framer Motion transitions */}
-      <main className="flex-1 relative z-10">
+      <main className="flex-1 relative">
         <AnimatePresence mode="wait">
           <motion.div
             key={view}
@@ -175,7 +199,7 @@ export default function App() {
                     setView('home');
                     setShowLogoutConfirm(false);
                   }}
-                  className="bg-red-650 hover:bg-red-750 text-white font-bold py-3 text-xs rounded-xl flex-1 cursor-pointer transition-all"
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 text-xs rounded-xl flex-1 cursor-pointer transition-all"
                 >
                   Yes, Sign Out
                 </button>

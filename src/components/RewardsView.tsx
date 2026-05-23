@@ -36,7 +36,7 @@ export default function RewardsView() {
 
   const handleShareLink = () => {
     const code = currentUser?.referralCode || 'KLEAN2026';
-    const link = `https://kleancity.app/invite?ref=${code}`;
+    const link = `https://klean-city.vercel.app/invite?ref=${code}`;
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(link);
@@ -250,7 +250,7 @@ export default function RewardsView() {
       {/* Redemption success overlays / drawer dialog modal */}
       <AnimatePresence>
         {isRedeemSuccessOpen && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[100]">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}

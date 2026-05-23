@@ -6,16 +6,17 @@ import { Recycle, Eye, EyeOff, AlertCircle } from 'lucide-react';
 interface AuthFormProps {
   type: 'login' | 'register';
   setView: (view: string) => void;
+  defaultReferralCode?: string;
 }
 
-export default function AuthForm({ type, setView }: AuthFormProps) {
+export default function AuthForm({ type, setView, defaultReferralCode = '' }: AuthFormProps) {
   const { login, signup, checkReferralCodeValidity } = useKleanStore();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [referralCode, setReferralCode] = useState('');
+  const [referralCode, setReferralCode] = useState(defaultReferralCode);
   
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -24,6 +25,12 @@ export default function AuthForm({ type, setView }: AuthFormProps) {
   const [isReferralValid, setIsReferralValid] = useState(true);
   const [isCheckingReferral, setIsCheckingReferral] = useState(false);
   const [referralError, setReferralError] = useState('');
+
+  React.useEffect(() => {
+    if (defaultReferralCode) {
+      setReferralCode(defaultReferralCode);
+    }
+  }, [defaultReferralCode]);
 
   React.useEffect(() => {
     if (type !== 'register') return;

@@ -184,7 +184,7 @@ export default function DisputesView() {
       {/* Create dispute sheet drawer dialog overlay */}
       <AnimatePresence>
         {isRaiseOpen && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-start justify-center p-4 z-50 overflow-y-auto">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-start justify-center p-4 z-[100] overflow-y-auto">
             <motion.div
               initial={{ scale: 0.97, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -293,7 +293,7 @@ export default function DisputesView() {
       {/* Cancel Alert dialog satisfying EXACT STRING rule */}
       <AnimatePresence>
         {isCancelAlertOpen && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-start justify-center p-4 z-50 overflow-y-auto">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-start justify-center p-4 z-[100] overflow-y-auto">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
