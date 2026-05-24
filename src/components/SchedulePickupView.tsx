@@ -13,6 +13,7 @@ export default function SchedulePickupView({ setView }: SchedulePickupViewProps)
   // Wizard state machine
   const [step, setStep] = useState(1);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isSuccess, setIsSuccess] = useState(false);
 
   // Step 1 states: Address
   const [addressSearch, setAddressSearch] = useState('');
@@ -169,11 +170,146 @@ export default function SchedulePickupView({ setView }: SchedulePickupViewProps)
         paymentMethod: selectedPaymentLabel
       });
 
-      setView('dashboard');
+      setIsSuccess(true);
     } catch (e: any) {
       setErrorMsg(e?.message || 'Error occurred during checkout.');
     }
   };
+
+  const handleReset = () => {
+    setStep(1);
+    setIsSuccess(false);
+    setAddressSearch('');
+    setSelectedAddress('');
+    setLandmark('');
+    setSelectedDate('');
+    setSelectedSlot('');
+    setSelectedWasteTypes([]);
+    setBagsCount(4);
+    setPaymentMethod('Wallet');
+    setCardNumber('');
+    setCardExpiry('');
+    setCardCvv('');
+    setIsConfirmed(false);
+    setErrorMsg('');
+  };
+
+  if (isSuccess) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 sm:px-8 py-12" id="pickup_success_container">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, cubicBezier: [0.16, 1, 0.3, 1] }}
+          className="bg-white rounded-[2.5rem] p-8 sm:p-12 border border-slate-100 shadow-2xl text-center space-y-8 relative overflow-hidden"
+        >
+          {/* Decorative background shapes */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-72 h-72 rounded-full bg-emerald-50 filter blur-3xl opacity-60 -z-10" />
+
+          {/* Success Animated Circle & Checkmark */}
+          <div className="relative mx-auto w-24 h-24">
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+              className="absolute inset-0 rounded-full bg-emerald-100/50 flex items-center justify-center animate-ping opacity-45"
+            />
+            <motion.div
+              initial={{ scale: 0, rotate: -45 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 100, damping: 15, delay: 0.2 }}
+              className="relative w-24 h-24 rounded-full bg-emerald-500 border-4 border-white shadow-lg flex items-center justify-center text-white mx-auto font-bold"
+            >
+              <Check size={48} strokeWidth={3} />
+            </motion.div>
+          </div>
+
+          <div className="space-y-3">
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="font-display font-bold text-3xl sm:text-4xl text-slate-900 tracking-tight"
+            >
+              Pickup Scheduled!
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="text-slate-500 text-sm max-w-md mx-auto leading-relaxed"
+            >
+              Your scheduling order has been locked successfully. Modern Lagos recycling collectors are notified and will arrive according to your slot!
+            </motion.p>
+          </div>
+
+          {/* Clean metadata summary card */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="bg-slate-50 border border-slate-100 p-6 rounded-3xl text-left divide-y divide-slate-200/50 text-xs font-semibold text-slate-600 space-y-3"
+          >
+            <div className="flex justify-between items-start gap-4 pb-3">
+              <span className="text-slate-400">Address Destination</span>
+              <span className="text-slate-800 text-right font-bold">{selectedAddress}</span>
+            </div>
+            <div className="flex justify-between items-center pt-3 pb-3">
+              <span className="text-slate-400">Time & Date</span>
+              <span className="text-slate-800 text-right font-bold">{selectedDate} • {selectedSlot}</span>
+            </div>
+            <div className="flex justify-between items-center pt-3 pb-3">
+              <span className="text-slate-400">Bags / Trash Types</span>
+              <span className="text-slate-800 text-right font-mono font-bold">
+                {bagsCount} Bags ({selectedWasteTypes.join(', ')})
+              </span>
+            </div>
+            <div className="flex justify-between items-center pt-3 pb-3">
+              <span className="text-slate-400">Payment Status</span>
+              <span className="text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-0.5 rounded-full font-bold uppercase text-[9px]">
+                Paid via {paymentMethod === 'Wallet' ? 'Wallet' : paymentMethod === 'Cash' ? 'Cash on Pickup' : 'Credit Card'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center pt-3 text-sm font-extrabold text-slate-850">
+              <span className="text-slate-900">Total Deducted / Charge</span>
+              <span className="text-slate-900 font-display font-black text-lg">₦{totalPrice.toLocaleString()}</span>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="p-4 bg-yellow-50 border border-yellow-105 rounded-2xl text-xs text-yellow-850 font-bold flex items-center justify-center gap-2"
+          >
+            <Sparkles size={16} className="text-yellow-500 animate-pulse" />
+            <span>Success! Completing this collection awards you +5 KleanPoints immediately.</span>
+          </motion.div>
+
+          {/* Action buttons */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+            className="flex flex-col sm:flex-row gap-4 pt-4 shrink-0"
+          >
+            <button
+              onClick={handleReset}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 px-6 rounded-2xl flex-1 text-xs cursor-pointer transition-all border border-slate-200"
+            >
+              Schedule Another
+            </button>
+            <button
+              onClick={() => setView('dashboard')}
+              className="bg-slate-900 hover:bg-slate-850 text-white font-bold py-3.5 px-6 rounded-2xl flex-1 text-xs cursor-pointer transition-all shadow-md active:scale-98"
+            >
+              Go to Dashboard
+            </button>
+          </motion.div>
+        </motion.div>
+      </div>
+    );
+  }
 
   // Steps headers list
   const stepsList = [
