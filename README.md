@@ -1,42 +1,543 @@
 ♻️ KleanCity
 
-<div align="center">
 
 Cleaner Cities, Smarter Waste Pickup.
 
-A premium climate-tech web application that enables Lagos households to schedule on-demand waste pickups, locate nearby recycling centers, and earn rewards for responsible waste disposal.
 
-Built for the TS Academy PM Capstone 2026.
-
-</div>
----
-
-🌍 Overview
-
-KleanCity is a modern waste management and recycling platform designed specifically for urban Lagos households.
-
-The platform solves two major environmental problems:
-
-Unreliable waste pickup
-
-Lack of accessible recycling points
+KleanCity is a modern climate-tech web application that enables Lagos households to schedule on-demand waste pickups, discover nearby recycling drop-off locations, and earn rewards for responsible waste disposal.
 
 
-Users can:
+Built as a TS Academy PM Capstone 2026 project, KleanCity combines sustainability, accessibility, and smart-city convenience into a premium digital experience tailored for urban Nigeria.
+
+
+
+🌍 Problem
+
+
+Urban Lagos faces major waste management challenges:
+
+
+
+
+Irregular waste collection
+
+
+Limited access to recycling points
+
+
+Poor waste disposal awareness
+
+
+Environmental pollution and flooding
+
+
+
+
+A survey conducted among Lagos residents revealed:
+
+
+
+
+77% would use a waste management app
+
+
+41% said they don't know nearby recycling points
+
+
+31% complained about unreliable waste collection
+
+
+56% would abandon an app that is slow or over-notifies them
+
+
+
+
+KleanCity was built to solve these problems.
+
+
+
+✨ Features
+
+
+🚛 On-Demand Waste Pickup
+
+
+
 
 Schedule waste pickups
 
-Track pickup status
 
-Locate recycling centers
+Select waste type
 
-Earn KleanPoints rewards
 
-Redeem rewards
+Choose pickup time slots
 
-Fund wallets
 
-Raise disputes
+Track pickup status in real time
+
+
+
+
+♻️ Recycling Drop-Off Locator
+
+
+
+
+Find nearby recycling centers in Lagos
+
+
+Interactive map integration
+
+
+Log recyclable drop-offs
+
+
+
+
+🪙 KleanPoints Rewards System
+
+
+
+
+Earn points for completed pickups
+
+
+Earn bonus points for recycling
+
+
+Redeem points for rewards and vouchers
+
+
+
+
+💳 Wallet System
+
+
+
+
+Fund wallet
+
+
+View saved cards
+
+
+Transaction history
+
+
+
+
+🛠️ Dispute Management
+
+
+
+
+Raise pickup disputes
+
+
+Upload evidence
+
+
+Track dispute status
+
+
+
+
+🔐 Authentication
+
+
+
+
+Secure signup/login
+
+
+Firebase Authentication
+
+
+Protected routes
+
+
+
+
+
+🧠 Product Goals
+
+
+KleanCity aims to:
+
+
+
+
+Improve urban waste collection efficiency
+
+
+Encourage recycling behavior
+
+
+Reduce environmental pollution
+
+
+Create a smarter waste management ecosystem
+
+
+Increase sustainability awareness in Lagos
+
+
+
+
+
+🏗️ Tech Stack
+
+
+Frontend
+
+
+
+
+Next.js 15+
+
+
+TypeScript
+
+
+TailwindCSS
+
+
+Framer Motion
+
+
+Zustand
+
+
+React Query
+
+
+React Hook Form
+
+
+Zod
+
+
+
+
+Backend
+
+
+
+
+Firebase Authentication
+
+
+Firebase Firestore
+
+
+Firebase Storage
+
+
+Firebase Cloud Functions
+
+
+
+
+APIs & Services
+
+
+
+
+Google Maps API
+
+
+OpenStreetMap Fallback
+
+
+
+
+Deployment
+
+
+
+
+Vercel
+
+
+
+
+
+📱 Core Screens
+
+
+
+
+Homepage
+
+
+Authentication
+
+
+Dashboard
+
+
+Schedule Pickup Flow
+
+
+Rewards
+
+
+Wallet
+
+
+Disputes
+
+
+
+
+
+🔄 Pickup Flow
+
+
+
+
+User schedules pickup
+
+
+Pickup status becomes Pending
+
+
+Collector accepts request
+
+
+Status updates to Accepted
+
+
+Pickup completed
+
+
+User earns +5 KleanPoints
+
+
+
+
+
+♻️ Recycling Flow
+
+
+
+
+User opens recycling map
+
+
+Finds nearby recycling point
+
+
+Logs recyclable drop-off
+
+
+Earns +10 KleanPoints
+
+
+
+
+
+📂 Project Structure
+
+
+/app
+/components
+/features
+/services
+/store
+/hooks
+/utils
+/types
+/lib
+/firebase
+/styles
+
+
+
+
+⚡ Installation
+
+
+Clone Repository
+
+
+git clone <repository-url>
+
+
+
+Navigate Into Project
+
+
+cd kleancity
+
+
+
+Install Dependencies
+
+
+npm install
+
+
+
+Run Development Server
+
+
+npm run dev
+
+
+
+
+🔑 Environment Variables
+
+
+Create a .env.local file:
+
+
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=
+
+
+
+
+🔥 Firebase Setup
+
+
+
+
+Create Firebase Project
+
+
+Enable Authentication
+
+
+Enable Firestore Database
+
+
+Enable Firebase Storage
+
+
+Add Web App credentials
+
+
+Paste credentials into .env.local
+
+
+
+
+
+🗺️ Seeded Lagos Recycling Locations
+
+
+
+
+Lekki
+
+
+Yaba
+
+
+Surulere
+
+
+Ikeja
+
+
+Victoria Island
+
+
+
+
+
+📊 Success Metrics
+
+
+
+
+Completed waste pickups
+
+
+Recycling participation
+
+
+KleanPoints earned
+
+
+User retention
+
+
+Fast page load performance
+
+
+
+
+
+🎨 Design Philosophy
+
+
+KleanCity combines:
+
+
+
+
+Eco-conscious aesthetics
+
+
+Premium fintech-inspired UI
+
+
+Smooth modern animations
+
+
+Mobile-first responsiveness
+
+
+Accessible design principles
+
+
+
+
+
+🚀 Deployment
+
+
+Deploy easily with Vercel:
+
+
+npm run build
+
+
+
+Then connect repository to Vercel.
+
+
+
+👥 Team
+
+
+TS Academy PM Capstone 2026
+
+Group 13 — Climate / Sustainability
+
+
+
+📜 License
+
+
+This project is for educational and demonstration purposes.
+
+
+
+🌱 KleanCity
+
+
+Building cleaner cities through smarter waste management.
+
 
 
 KleanCity combines sustainability, accessibility, and smart-city convenience into a polished digital experience.
